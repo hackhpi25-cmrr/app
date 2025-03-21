@@ -2,10 +2,10 @@ import { StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
-export default function HomeScreen() {
+export default function CommunityScreen() {
   return (
     <ThemedView style={styles.container}>
-      <ThemedText style={styles.text} type="title">Hello World</ThemedText>
+      <ThemedText style={styles.text} type="title">Community</ThemedText>
     </ThemedView>
   );
 }
@@ -19,4 +19,4 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 24,
   },
-});
+}); 

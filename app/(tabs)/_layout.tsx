@@ -18,7 +18,6 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#AAAAAA',
         headerShown: false,
         tabBarButton: CenteredHapticTab,
-        tabBarBackground: TabBarBackground,
         tabBarShowLabel: false,
         tabBarStyle: Platform.select({
           ios: {
@@ -36,14 +35,7 @@ export default function TabLayout() {
             bottom: 5,
           },
           default: {
-            backgroundColor: 'rgba(255, 255, 255, 0.98)',
-            borderTopWidth: 0,
             height: 65,
-            borderRadius: 24,
-            margin: 14,
-            marginBottom: 15,
-            elevation: 8,
-            bottom: 5,
           },
         }),
       }}>

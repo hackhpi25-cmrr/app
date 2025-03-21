@@ -1,22 +1,22 @@
 import { StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import React from 'react';
+import { HomeLayout } from '@/components/layouts/HomeLayout';
+import { Greeting } from '@/components/home/Greeting';
+import { DailyCheckin } from '@/components/questionnaire/DailyCheckin';
+import { SelectedAnswers } from '@/types/questionnaire';
 
 export default function HomeScreen() {
+  const handleSubmit = (answers: SelectedAnswers) => {
+    console.log('Answers submitted:', answers);
+    // Here you would typically send data to backend or process it
+    alert('Thank you for your responses!');
+  };
+  
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText style={styles.text} type="title">Hello World</ThemedText>
-    </ThemedView>
+    <HomeLayout
+      headerComponent={<Greeting />}
+    >
+      <DailyCheckin onSubmit={handleSubmit} />
+    </HomeLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 24,
-  },
-});

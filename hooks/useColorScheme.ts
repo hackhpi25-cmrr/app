@@ -1,7 +1,9 @@
-import { useColorScheme as useDeviceColorScheme } from 'react-native';
+import { useColorScheme as _useColorScheme } from 'react-native';
 
-// Override the system color scheme to always use light mode
-export function useColorScheme(): 'light' {
-  // Ignore the device color scheme and always return 'light'
+// Modified version of useColorScheme that always returns 'light'
+export function useColorScheme(): 'light' | 'dark' {
+  const colorScheme = _useColorScheme();
+  
+  // Always return 'light' to enforce light theme app-wide
   return 'light';
 }

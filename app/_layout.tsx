@@ -10,6 +10,7 @@ import { View, ActivityIndicator } from 'react-native';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { initializeAudio } from '@/services/AudioInit';
+import { EnvironmentalDataProvider } from '@/components/EnvironmentalDataProvider';
 
 // Initialize audio as early as possible
 initializeAudio().catch(error => {
@@ -76,15 +77,17 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        {/* Always render the navigator first, then handle redirects */}
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(treatments)" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      {!isAuthenticated && <Redirect href="/(auth)/login" />}
-      <StatusBar style="auto" />
+      <EnvironmentalDataProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          {/* Always render the navigator first, then handle redirects */}
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(treatments)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        {!isAuthenticated && <Redirect href="/(auth)/login" />}
+        <StatusBar style="auto" />
+      </EnvironmentalDataProvider>
     </ThemeProvider>
   );
 }

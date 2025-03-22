@@ -139,7 +139,7 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
     getUserId();
   }, [userId]);
 
-  // Load parameters when component mounts or when currentUserId changes
+  // Load parameters when component mounts
   useEffect(() => {
     fetchParameters();
   }, [currentUserId]);
@@ -149,11 +149,8 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
     try {
       setIsLoading(true);
       
-      console.log('fetchParameters called with currentUserId:', currentUserId);
-      
       // Ensure we have a user ID before fetching custom parameters
       if (!currentUserId) {
-        console.log('No currentUserId available, fetching general parameters only');
         // Fetch general parameters only if user ID is not available
         const generalResponse = await fetch(`${AuthService.API_URL}/parameters`);
         
@@ -168,14 +165,10 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
           !param.baselineQuestion && !param.passive
         );
         
-        console.log('General parameters only:', activeParameters.length);
-        
         // Process and set parameters as before
         processParameters(activeParameters);
         return;
       }
-      
-      console.log('Fetching both general and custom parameters for user:', currentUserId);
       
       // Fetch both general and user-specific (custom) parameters
       const [generalResponse, customResponse] = await Promise.all([
@@ -194,26 +187,20 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
       // Get custom parameters if available
       if (customResponse.ok) {
         customData = await customResponse.json();
-        console.log('Custom parameters fetched:', customData.length);
         // Mark custom parameters
         customData = customData.map(param => ({
           ...param,
           isCustom: true
         }));
-      } else {
-        console.log('Failed to fetch custom parameters:', customResponse.status);
       }
       
       // Combine general and custom parameters
       const allParameters = [...generalData, ...customData];
-      console.log('Combined parameters total:', allParameters.length);
       
       // Filter out baseline questions and passive parameters
       const activeParameters = allParameters.filter((param: Parameter) => 
         !param.baselineQuestion && !param.passive
       );
-      
-      console.log('Active parameters after filtering:', activeParameters.length);
       
       // Process the filtered parameters
       processParameters(activeParameters);
@@ -228,9 +215,6 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
 
   // Helper function to process parameters (fetch enum types and set initial answers)
   const processParameters = async (activeParameters: Parameter[]) => {
-    console.log('Processing parameters:', activeParameters.length);
-    console.log('Custom parameters count:', activeParameters.filter(p => p.isCustom).length);
-    
     // Fetch enum types for each enum parameter
     const parametersWithEnumTypes = await Promise.all(
       activeParameters.map(async (parameter: Parameter) => {
@@ -240,7 +224,6 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
             ? `${AuthService.API_URL}/users/${currentUserId}/parameter/${parameter.id}/enumtype`
             : `${AuthService.API_URL}/parameter/${parameter.id}/enumtype`;
           
-          console.log(`Fetching enum types for parameter ${parameter.id} from ${enumEndpoint}`);
           const enumTypesResponse = await fetch(enumEndpoint);
           
           if (enumTypesResponse.ok) {
@@ -251,9 +234,6 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
         return parameter;
       })
     );
-    
-    console.log('Final parameters with enum types:', parametersWithEnumTypes.length);
-    console.log('Final custom parameters:', parametersWithEnumTypes.filter(p => p.isCustom).length);
     
     setParameters(parametersWithEnumTypes);
     

@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, Alert, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, Alert, View, Text } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
@@ -10,24 +10,35 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function SettingsScreen() {
   const router = useRouter();
   const [showParameters, setShowParameters] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Check if user ID is available, set a default if needed
+  // Check if user ID is available
   useEffect(() => {
-    const checkUserId = async () => {
-      try {
-        const userId = await AsyncStorage.getItem('user_id');
-        if (!userId) {
-          // Set a default user ID for testing
-          await AsyncStorage.setItem('user_id', '1');
-          console.log('Set default user ID: 1 in settings screen');
-        }
-      } catch (error) {
-        console.error('Error checking user ID:', error);
-      }
-    };
-    
-    checkUserId();
+    getUserId();
   }, []);
+  
+  const getUserId = async () => {
+    try {
+      const storedUserId = await AsyncStorage.getItem('user_id');
+      setUserId(storedUserId);
+    } catch (error) {
+      // Silently handle error
+    }
+  };
+  
+  const handleRefreshUserId = async () => {
+    try {
+      const refreshedId = await AuthService.refreshUserId();
+      if (refreshedId) {
+        setUserId(refreshedId.toString());
+        Alert.alert("Success", "User ID refreshed successfully");
+      } else {
+        Alert.alert("Error", "Failed to refresh user ID");
+      }
+    } catch (error) {
+      Alert.alert("Error", "An error occurred while refreshing user ID");
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -70,6 +81,17 @@ export default function SettingsScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText style={styles.text} type="title">Settings</ThemedText>
+      
+      {/* Display User ID for debugging */}
+      <View style={styles.userInfoSection}>
+        <View style={styles.userInfoHeader}>
+          <ThemedText style={styles.userInfoLabel}>User ID:</ThemedText>
+          <TouchableOpacity onPress={handleRefreshUserId} style={styles.refreshButton}>
+            <ThemedText style={styles.refreshButtonText}>Refresh</ThemedText>
+          </TouchableOpacity>
+        </View>
+        <ThemedText style={styles.userInfoValue}>{userId || 'Not available'}</ThemedText>
+      </View>
       
       <ThemedView style={styles.optionsContainer}>
         {/* Custom Parameters option */}
@@ -139,5 +161,38 @@ const styles = StyleSheet.create({
   backButton: {
     fontSize: 18,
     fontWeight: '500',
-  }
+  },
+  userInfoSection: {
+    backgroundColor: '#F2F2F7',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  userInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  userInfoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 5,
+    color: '#666',
+  },
+  userInfoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  refreshButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+  },
+  refreshButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
 }); 

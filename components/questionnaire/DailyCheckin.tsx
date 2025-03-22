@@ -20,6 +20,7 @@ interface Parameter {
   weight: number;
   user: number | null;
   enumtypes?: EnumType[];
+  isCustom?: boolean; // Flag to identify custom parameters
 }
 
 interface EnumType {
@@ -138,67 +139,137 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
     getUserId();
   }, [userId]);
 
-  // Load parameters when component mounts
+  // Load parameters when component mounts or when currentUserId changes
   useEffect(() => {
     fetchParameters();
-  }, []);
+  }, [currentUserId]);
 
   // Fetch parameters from backend
   const fetchParameters = async () => {
     try {
       setIsLoading(true);
-      // Fetch user-specific and general parameters
-      const response = await fetch(`${AuthService.API_URL}/parameters`);
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch parameters');
+      console.log('fetchParameters called with currentUserId:', currentUserId);
+      
+      // Ensure we have a user ID before fetching custom parameters
+      if (!currentUserId) {
+        console.log('No currentUserId available, fetching general parameters only');
+        // Fetch general parameters only if user ID is not available
+        const generalResponse = await fetch(`${AuthService.API_URL}/parameters`);
+        
+        if (!generalResponse.ok) {
+          throw new Error('Failed to fetch parameters');
+        }
+        
+        const generalData = await generalResponse.json();
+        
+        // Filter out baseline questions and passive parameters
+        const activeParameters = generalData.filter((param: Parameter) => 
+          !param.baselineQuestion && !param.passive
+        );
+        
+        console.log('General parameters only:', activeParameters.length);
+        
+        // Process and set parameters as before
+        processParameters(activeParameters);
+        return;
       }
       
-      const data = await response.json();
+      console.log('Fetching both general and custom parameters for user:', currentUserId);
+      
+      // Fetch both general and user-specific (custom) parameters
+      const [generalResponse, customResponse] = await Promise.all([
+        fetch(`${AuthService.API_URL}/parameters`),
+        fetch(`${AuthService.API_URL}/users/${currentUserId}/parameters`)
+      ]);
+      
+      if (!generalResponse.ok) {
+        throw new Error('Failed to fetch general parameters');
+      }
+      
+      // Get general parameters
+      const generalData = await generalResponse.json();
+      let customData: Parameter[] = [];
+      
+      // Get custom parameters if available
+      if (customResponse.ok) {
+        customData = await customResponse.json();
+        console.log('Custom parameters fetched:', customData.length);
+        // Mark custom parameters
+        customData = customData.map(param => ({
+          ...param,
+          isCustom: true
+        }));
+      } else {
+        console.log('Failed to fetch custom parameters:', customResponse.status);
+      }
+      
+      // Combine general and custom parameters
+      const allParameters = [...generalData, ...customData];
+      console.log('Combined parameters total:', allParameters.length);
       
       // Filter out baseline questions and passive parameters
-      const activeParameters = data.filter((param: Parameter) => 
+      const activeParameters = allParameters.filter((param: Parameter) => 
         !param.baselineQuestion && !param.passive
       );
       
-      // Fetch enum types for each enum parameter
-      const parametersWithEnumTypes = await Promise.all(
-        activeParameters.map(async (parameter: Parameter) => {
-          if (parameter.parameter_type === 'Enum') {
-            const enumTypesResponse = await fetch(
-              `${AuthService.API_URL}/parameter/${parameter.id}/enumtype`
-            );
-            
-            if (enumTypesResponse.ok) {
-              const enumTypes = await enumTypesResponse.json();
-              return { ...parameter, enumtypes: enumTypes };
-            }
-          }
-          return parameter;
-        })
-      );
+      console.log('Active parameters after filtering:', activeParameters.length);
       
-      setParameters(parametersWithEnumTypes);
+      // Process the filtered parameters
+      processParameters(activeParameters);
       
-      // Initialize answers with default values
-      const initialAnswers: {[key: string]: number} = {};
-      parametersWithEnumTypes.forEach((parameter: Parameter) => {
-        if (parameter.parameter_type === 'Boolean') {
-          initialAnswers[parameter.id.toString()] = 0;
-        } else if (parameter.parameter_type === 'Number') {
-          initialAnswers[parameter.id.toString()] = 5;
-        } else if (parameter.parameter_type === 'Enum' && parameter.enumtypes && parameter.enumtypes.length > 0) {
-          initialAnswers[parameter.id.toString()] = parameter.enumtypes[0].value;
-        }
-      });
-      
-      setSelectedAnswers(initialAnswers);
     } catch (error) {
       setError('Failed to load questions. Please try again.');
       if (onError) onError('Failed to load questions');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Helper function to process parameters (fetch enum types and set initial answers)
+  const processParameters = async (activeParameters: Parameter[]) => {
+    console.log('Processing parameters:', activeParameters.length);
+    console.log('Custom parameters count:', activeParameters.filter(p => p.isCustom).length);
+    
+    // Fetch enum types for each enum parameter
+    const parametersWithEnumTypes = await Promise.all(
+      activeParameters.map(async (parameter: Parameter) => {
+        if (parameter.parameter_type === 'Enum') {
+          // Use the appropriate endpoint based on whether it's a custom parameter
+          const enumEndpoint = parameter.isCustom && currentUserId
+            ? `${AuthService.API_URL}/users/${currentUserId}/parameter/${parameter.id}/enumtype`
+            : `${AuthService.API_URL}/parameter/${parameter.id}/enumtype`;
+          
+          console.log(`Fetching enum types for parameter ${parameter.id} from ${enumEndpoint}`);
+          const enumTypesResponse = await fetch(enumEndpoint);
+          
+          if (enumTypesResponse.ok) {
+            const enumTypes = await enumTypesResponse.json();
+            return { ...parameter, enumtypes: enumTypes };
+          }
+        }
+        return parameter;
+      })
+    );
+    
+    console.log('Final parameters with enum types:', parametersWithEnumTypes.length);
+    console.log('Final custom parameters:', parametersWithEnumTypes.filter(p => p.isCustom).length);
+    
+    setParameters(parametersWithEnumTypes);
+    
+    // Initialize answers with default values
+    const initialAnswers: {[key: string]: number} = {};
+    parametersWithEnumTypes.forEach((parameter: Parameter) => {
+      if (parameter.parameter_type === 'Boolean') {
+        initialAnswers[parameter.id.toString()] = 0;
+      } else if (parameter.parameter_type === 'Number') {
+        initialAnswers[parameter.id.toString()] = 5;
+      } else if (parameter.parameter_type === 'Enum' && parameter.enumtypes && parameter.enumtypes.length > 0) {
+        initialAnswers[parameter.id.toString()] = parameter.enumtypes[0].value;
+      }
+    });
+    
+    setSelectedAnswers(initialAnswers);
   };
 
   const handleSelectOption = (parameterId: string, value: number) => {
@@ -440,6 +511,15 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
         </View>
       ) : null}
       
+      {/* Custom parameter badge if applicable */}
+      {currentParameter.isCustom && (
+        <View style={styles.customBadgeContainer}>
+          <View style={styles.customBadge}>
+            <ThemedText style={styles.customBadgeText}>Custom</ThemedText>
+          </View>
+        </View>
+      )}
+      
       {/* Question */}
       <ThemedText style={styles.question}>{currentParameter.name}</ThemedText>
       
@@ -590,5 +670,22 @@ const styles = StyleSheet.create({
   enumOptionText: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  customBadgeContainer: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  customBadge: {
+    backgroundColor: '#8E44AD15',
+    borderColor: '#8E44AD30',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  customBadgeText: {
+    color: '#8E44AD',
+    fontSize: 12,
+    fontWeight: '600',
   },
 }); 

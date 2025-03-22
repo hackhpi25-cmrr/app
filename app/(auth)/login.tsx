@@ -64,35 +64,20 @@ export default function LoginScreen() {
       
       const tokens = await AuthService.login(loginData);
       
-      // Explicitly store a user ID for testing purposes
-      // In a production app, this should be retrieved from the backend
-      await AsyncStorage.setItem('user_id', '1');
-      console.log('Set default user ID: 1 for testing during login');
-      
-      // Get user information from the API
       const isNewUser = !!successMessage;
       
       if (isNewUser) {
         // User just registered, go to baseline questionnaire
         try {
-          // For new users, we need to get their user ID
-          const response = await fetch(`${AuthService.API_URL}/amiauth`, {
-            headers: {
-              'Authorization': `Bearer ${tokens.access}`,
-            },
-          });
+          // Verify authentication status before redirecting
+          const authStatus = await AuthService.checkAuth();
           
-          if (response.ok) {
-            // The user is authenticated, but we need their user ID
-            // For now, we'll redirect to the baseline screen without the user ID
-            // and handle fetching it there
+          if (authStatus) {
             router.replace('/(auth)/baseline');
           } else {
-            // If we can't verify authentication, just go to the main app
             router.replace('/(tabs)');
           }
         } catch (error) {
-          console.error('Error checking auth status:', error);
           router.replace('/(tabs)');
         }
       } else {

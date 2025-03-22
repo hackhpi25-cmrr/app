@@ -25,23 +25,27 @@ export function CustomParameterScreen() {
   useEffect(() => {
     const fetchUserId = async () => {
       try {
-        // Try to get the user ID from AuthService
         const id = await AuthService.getCurrentUserId();
         
         if (id) {
           setUserId(id);
         } else {
-          // Temporary fix: Set a default user ID for testing
-          // In a production app, this should be removed and the proper login flow fixed
-          console.log("No user ID found, using default for testing");
-          const defaultUserId = 1; // Use an appropriate test user ID that exists in your system
-          setUserId(defaultUserId);
-          
-          // Store it for future use
-          await AsyncStorage.setItem('user_id', defaultUserId.toString());
+          // Redirect to login if user ID is not available
+          Alert.alert(
+            "Authentication Required",
+            "Please log in to manage your parameters.",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  // Use appropriate navigation here
+                }
+              }
+            ]
+          );
         }
       } catch (error) {
-        console.error('Error fetching user ID:', error);
+        // Handle error silently
       }
     };
 

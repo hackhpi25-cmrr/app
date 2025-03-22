@@ -52,8 +52,6 @@ export class AuthService {
   
   static async register(data: RegisterData): Promise<void> {
     try {
-      console.log('Registering user:', data);
-      console.log('API URL:', `${API_URL}/register`);
       const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: {
@@ -67,7 +65,6 @@ export class AuthService {
         throw new Error(errorData.detail || 'Registration failed');
       }
     } catch (error) {
-      console.error('Registration error:', error);
       throw error;
     }
   }
@@ -96,7 +93,6 @@ export class AuthService {
       
       return null;
     } catch (error) {
-      console.error('Error getting user ID:', error);
       return null;
     }
   }
@@ -126,46 +122,27 @@ export class AuthService {
       
       return tokens;
     } catch (error) {
-      console.error('Login error:', error);
       throw error;
     }
   }
 
   static async storeCurrentUserId(username: string): Promise<void> {
     try {
-      // Try to get users list first
       const usersResponse = await this.getAuthenticatedRequest(`${API_URL}/users`);
       
       if (usersResponse.ok) {
-        const users = await usersResponse.json();
-        const currentUser = users.find((user: User) => user.username === username);
-        
-        if (currentUser && currentUser.id) {
-          await AsyncStorage.setItem('user_id', currentUser.id.toString());
-          console.log(`Stored user ID: ${currentUser.id} for user: ${username}`);
-          return;
+        const user = await usersResponse.json();
+        if (user && user.id) {
+          await AsyncStorage.setItem('user_id', user.id.toString());
+        } else {
+          throw new Error('User ID not found in response');
         }
-      }
-      
-      // If we couldn't get the user ID from the /users endpoint, 
-      // try an alternative approach or use a default for testing
-      
-      // Try to parse user ID from token (this is just a placeholder, actual implementation
-      // would depend on your token structure and if it contains the user ID)
-      const tokens = await this.getTokens();
-      if (tokens) {
-        try {
-          // For development/testing purposes, set a default user ID
-          // In production, this should be replaced with proper user ID retrieval
-          const defaultUserId = 1; // Use an appropriate test user ID
-          await AsyncStorage.setItem('user_id', defaultUserId.toString());
-          console.log(`Stored default user ID: ${defaultUserId} for testing`);
-        } catch (parseError) {
-          console.error('Error parsing token for user ID:', parseError);
-        }
+      } else {
+        throw new Error('Failed to retrieve user data');
       }
     } catch (error) {
-      console.error('Error storing user ID:', error);
+      // Just rethrow the error without fallback
+      throw error;
     }
   }
 
@@ -174,7 +151,38 @@ export class AuthService {
       const userIdStr = await AsyncStorage.getItem('user_id');
       return userIdStr ? parseInt(userIdStr, 10) : null;
     } catch (error) {
-      console.error('Error getting user ID:', error);
+      return null;
+    }
+  }
+
+  static async refreshUserId(): Promise<number | null> {
+    try {
+      const tokens = await this.getTokens();
+      if (!tokens) {
+        return null;
+      }
+      
+      const username = await this.getUsername();
+      if (username) {
+        await this.storeCurrentUserId(username);
+      }
+      
+      return this.getCurrentUserId();
+    } catch (error) {
+      return null;
+    }
+  }
+  
+  // Helper method to get username from stored token or profile
+  static async getUsername(): Promise<string | null> {
+    try {
+      const usersResponse = await this.getAuthenticatedRequest(`${API_URL}/users`);
+      if (usersResponse.ok) {
+        const userData = await usersResponse.json();
+        return userData.username || null;
+      }
+      return null;
+    } catch (error) {
       return null;
     }
   }

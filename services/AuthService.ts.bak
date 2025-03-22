@@ -9,8 +9,36 @@ type NetworkConfig = {
   usePortForwarding: boolean;
 };
 
+// Configure the API URL based on where the app is running
+// When using USB debugging with a physical device, usePortForwarding should be true
+// This will use localhost:8000 which is forwarded via ADB to your computer
+const CONFIG: NetworkConfig = {
+  apiUrl: 'http://10.60.60.71:8000',
+  usePortForwarding: true
+};
 
-const API_URL = 'http://localhost:8000';
+let API_URL = CONFIG.apiUrl;
+
+// For development mode
+if (__DEV__) {
+  if (CONFIG.usePortForwarding && Platform.OS === 'android') {
+    // When using adb reverse tcp:8000 tcp:8000, use localhost
+    API_URL = 'http://localhost:8000';
+  } else if (Platform.OS === 'ios' && !CONFIG.usePortForwarding) {
+    // For iOS simulator without port forwarding
+    API_URL = 'http://localhost:8000';
+  } else if (Platform.OS === 'android' && !CONFIG.usePortForwarding) {
+    // For Android emulator or direct connection without port forwarding
+    API_URL = CONFIG.apiUrl;
+  } else {
+    console.log('Using default config:', API_URL);
+  }
+}
+
+
+// Add debug function for network calls
+// Export the API_URL for use in other files
+export { API_URL };
 
 export interface User {
   username: string;

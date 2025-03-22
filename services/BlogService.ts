@@ -1,7 +1,4 @@
-import { AuthService } from './AuthService';
-
-// Use the same API_URL as in AuthService
-const API_URL = 'http://localhost:8000';
+import { AuthService, API_URL } from './AuthService';
 
 export interface BlogEntry {
   id: number;

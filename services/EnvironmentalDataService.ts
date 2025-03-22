@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { AuthService } from '@/services/AuthService';
 import { jwtDecode } from '@/utils/jwtHelper';
 import { Audio } from 'expo-av';
+import NotificationService from './NotificationService';
 
 // Try importing Location, but provide fallback if it fails
 let Location: any = null;
@@ -105,12 +106,8 @@ class EnvironmentalDataService {
       // Request audio permissions for loudness measurement
       if (Platform.OS !== 'web') {
         try {
-          const { status: audioStatus } = await Audio.requestPermissionsAsync();
-          if (audioStatus !== 'granted') {
-            console.warn('Audio permission denied. Loudness data will be simulated.');
-          }
+
         } catch (error) {
-          console.warn('Failed to request audio permissions:', error);
         }
       }
     } catch (error) {
@@ -221,6 +218,10 @@ class EnvironmentalDataService {
             linearPCMIsBigEndian: false,
             linearPCMIsFloat: false,
           },
+          web: {
+            mimeType: 'audio/webm',
+            bitsPerSecond: 128000,
+          },
         });
 
         await recording.startAsync();
@@ -249,11 +250,9 @@ class EnvironmentalDataService {
         
         return loudness;
       } catch (error) {
-        console.warn('Error measuring loudness, using simulated data:', error);
         return this.simulateLoudness();
       }
     } catch (error) {
-      console.warn('Fatal error measuring loudness, using simulated data:', error);
       return this.simulateLoudness();
     }
   }
@@ -354,6 +353,8 @@ class EnvironmentalDataService {
         const data = await response.json();
         if (data && data.treatment) {
           console.log(`Received treatment suggestion: ${data.treatment}`);
+          // Send notification to user with the treatment suggestion
+          await NotificationService.sendTreatmentSuggestion(data.treatment);
         }
       } catch (e) {
         // No treatment data returned, which is fine

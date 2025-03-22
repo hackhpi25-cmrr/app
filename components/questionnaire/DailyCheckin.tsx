@@ -9,6 +9,7 @@ import { RadioOption } from '@/components/ui/RadioOption';
 import { AuthService } from '@/services/AuthService';
 import { Switch } from 'react-native';
 import { jwtDecode } from '@/utils/jwtHelper';
+import { useNavigation, useRouter } from 'expo-router';
 
 // Parameter interface based on API response
 interface Parameter {
@@ -29,6 +30,16 @@ interface EnumType {
   value: number;
 }
 
+// Interface for treatment recommendation
+interface TreatmentRecommendation {
+  id: number;
+  logbook_entry: number;
+  user: number;
+  treatment: number;
+  perceived_effectiveness?: number;
+  effectiveness?: number;
+}
+
 interface DailyCheckinProps {
   userId?: number; // Make userId optional to prevent TypeScript errors
   onSubmit?: (answers: any) => void;
@@ -36,9 +47,14 @@ interface DailyCheckinProps {
 }
 
 // Helper function to get a color on a green-yellow-red gradient
-const getGradientColor = (value: number, max: number = 10): string => {
+const getGradientColor = (value: number, max: number = 10, reverse: boolean = false): string => {
   // Normalize the value to a 0-1 range
-  const normalizedValue = value / max;
+  let normalizedValue = value / max;
+  
+  // If reverse is true (for positive parameters like sleep quality), flip the scale
+  if (reverse) {
+    normalizedValue = 1 - normalizedValue;
+  }
   
   // RGB values for gradient: green (low) -> yellow (medium) -> red (high)
   let r, g, b = 0;
@@ -94,6 +110,7 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | undefined>(userId);
+  const router = useRouter();
 
   // Try to get userId from auth service if not provided
   useEffect(() => {
@@ -323,17 +340,39 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
         throw new Error('Failed to submit daily check-in');
       }
       
-      // Call the onSubmit callback if provided
-      if (onSubmit) {
-        onSubmit(selectedAnswers);
+      // Get the logId from the response
+      const logId = await response.json();
+      
+      console.log('Log submission successful, log ID:', logId);
+      
+      // Fetch the recommendation based on the logId
+      const recommendationResponse = await fetch(`${AuthService.API_URL}/users/${currentUserId}/logs/${logId}/suggestion`);
+      
+      if (!recommendationResponse.ok) {
+        throw new Error('Failed to fetch recommendation');
       }
       
+      const recommendation: TreatmentRecommendation = await recommendationResponse.json();
+      console.log('Retrieved recommendation:', recommendation);
+      
+      // Call the onSubmit callback if provided
+      if (onSubmit) {
+        onSubmit({
+          ...selectedAnswers,
+          recommendation
+        });
+      }
+
       // Reset the form
       setCurrentQuestionIndex(0);
       setSelectedAnswers({});
       
+      // Navigate to the appropriate treatment based on the recommendation
+      navigateToTreatment(recommendation);
+      
     } catch (error) {
       const errorMsg = 'Failed to submit answers. Please try again.';
+      console.error(error);
       setError(errorMsg);
       if (onError) onError(errorMsg);
     } finally {
@@ -341,9 +380,59 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
     }
   };
   
+  // Function to navigate to the appropriate treatment screen based on the recommendation
+  const navigateToTreatment = (recommendation: TreatmentRecommendation) => {
+    if (!recommendation || !recommendation.treatment) {
+      console.log('Invalid recommendation or missing treatment ID');
+      return;
+    }
+    
+    // Get the treatment ID from the recommendation
+    const treatmentId = recommendation.treatment;
+    console.log('Navigating to treatment ID:', treatmentId);
+    
+    // Define treatment route types to ensure type safety
+    type TreatmentRoute = '/(treatments)/sounds' | '/(treatments)/distractions' | '/(treatments)/relaxation' | '/(treatments)/movement' | '/(treatments)/earjaw';
+    
+    // You would need a mapping of treatment IDs to treatment categories
+    // This is a simplified example - you'll need to adjust based on your actual data structure
+    const categoryMapping: Record<number, TreatmentRoute> = {
+      // Sound therapy treatments
+      1: '/(treatments)/sounds',
+      2: '/(treatments)/sounds',
+      3: '/(treatments)/sounds',
+      
+      // Distraction treatments
+      4: '/(treatments)/distractions',
+      5: '/(treatments)/distractions',
+      
+      // Relaxation treatments
+      6: '/(treatments)/relaxation',
+      7: '/(treatments)/relaxation',
+      
+      // Movement treatments
+      8: '/(treatments)/movement',
+      9: '/(treatments)/movement',
+      
+      // Ear & Jaw treatments
+      10: '/(treatments)/earjaw',
+      11: '/(treatments)/earjaw',
+    };
+    
+    // Default to sounds if unknown
+    const defaultRoute: TreatmentRoute = '/(treatments)/sounds';
+    
+    // Navigate to the appropriate treatment screen
+    const route = categoryMapping[treatmentId] || defaultRoute;
+    console.log('Navigating to route:', route);
+    router.push(route);
+  };
+  
   // Render different input types based on parameter type
   const renderQuestionInput = (parameter: Parameter) => {
     const parameterId = parameter.id.toString();
+    // Check if this is the sleep quality question
+    const isSleepQuestion = parameter.name.toLowerCase().includes('sleep');
     
     switch (parameter.parameter_type) {
       case 'Boolean':
@@ -365,12 +454,12 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
       case 'Number':
         return (
           <View style={styles.numberContainer}>
-            <ThemedText style={[styles.sliderValue, { color: getGradientColor(selectedAnswers[parameterId]) }]}>
+            <ThemedText style={[styles.sliderValue, { color: getGradientColor(selectedAnswers[parameterId], 10, isSleepQuestion) }]}>
               {selectedAnswers[parameterId]}
             </ThemedText>
             <View style={styles.numberButtonsContainer}>
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
-                const buttonColor = getGradientColor(num);
+                const buttonColor = getGradientColor(num, 10, isSleepQuestion);
                 return (
                   <TouchableOpacity
                     key={num}
@@ -409,7 +498,7 @@ export const DailyCheckin: React.FC<DailyCheckinProps> = ({ userId, onSubmit, on
         return (
           <View style={styles.enumContainer}>
             {sortedEnumTypes.map((option) => {
-              const optionColor = getGradientColor(option.value, maxEnumValue);
+              const optionColor = getGradientColor(option.value, maxEnumValue, isSleepQuestion);
               return (
                 <TouchableOpacity
                   key={option.id}

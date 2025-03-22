@@ -12,7 +12,6 @@ import {
   Alert,
   Switch
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { AuthService } from '@/services/AuthService';

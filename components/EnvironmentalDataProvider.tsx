@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/ThemedText';
 import { useEnvironmentalData } from '@/hooks/useEnvironmentalData';
+import NotificationService from '@/services/NotificationService';
 
 const AUTO_START_KEY = 'environmental_data_auto_start';
 
@@ -16,6 +17,19 @@ export const EnvironmentalDataProvider: React.FC<EnvironmentalDataProviderProps>
   const [shouldAutoStart, setShouldAutoStart] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const { isRunning, startService } = useEnvironmentalData();
+
+  // Initialize notification service
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        await NotificationService.initialize();
+      } catch (error) {
+        console.error('Failed to initialize notification service:', error);
+      }
+    };
+
+    initNotifications();
+  }, []);
 
   // Check if auto-start is enabled on component mount
   useEffect(() => {

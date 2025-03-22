@@ -416,6 +416,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   headerIconContainer: {
+    marginTop: 60,
     width: 100,
     height: 100,
     borderRadius: 50,

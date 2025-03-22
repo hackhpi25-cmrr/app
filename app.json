@@ -14,7 +14,7 @@
       "bundleIdentifier": "com.tobiashornbogen.tinnitus",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": ["audio", "remote-notification"]
       }
     },
     "android": {
@@ -22,7 +22,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.tobiashornbogen.tinnitus"
+      "package": "com.tobiashornbogen.tinnitus",
+      "permissions": ["RECEIVE_BOOT_COMPLETED", "NOTIFICATIONS"]
     },
     "web": {
       "bundler": "metro",
@@ -45,6 +46,13 @@
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
           "backgroundAudio": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#ffffff"
         }
       ]
     ],

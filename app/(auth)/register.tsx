@@ -82,8 +82,14 @@ export default function RegisterScreen() {
     try {
       await AuthService.register(formData);
       
-      // After successful registration, navigate to login
-      router.replace('/(auth)/login');
+      // After successful registration, navigate to login with username prefilled and a success message
+      router.replace({
+        pathname: '/(auth)/login',
+        params: { 
+          username: formData.username,
+          message: 'Registration successful! Please login to continue with the baseline questionnaire.'
+        }
+      });
     } catch (error: any) {
       setError(error.message || 'Registration failed. Please try again.');
     } finally {

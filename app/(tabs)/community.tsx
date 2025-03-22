@@ -564,8 +564,9 @@ export default function CommunityScreen() {
       >
         <View style={styles.modalOverlay}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.keyboardAvoidingView}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
           >
             <ThemedView style={styles.newPostModalContainer} lightColor="#ffffff" darkColor="#ffffff">
               <View style={styles.modalHeader}>
@@ -575,41 +576,47 @@ export default function CommunityScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.newPostContainer}>
-                <TextInput
-                  style={styles.titleInput}
-                  placeholder="Title"
-                  placeholderTextColor="#9e9e9e"
-                  value={newPostTitle}
-                  onChangeText={setNewPostTitle}
-                  maxLength={128} // Match backend constraint
-                />
-                
-                <TextInput
-                  style={styles.newPostInput}
-                  placeholder="What has helped with your tinnitus?"
-                  placeholderTextColor="#9e9e9e"
-                  multiline
-                  textAlignVertical="top"
-                  value={newPostContent}
-                  onChangeText={setNewPostContent}
-                  maxLength={1024} // Match backend constraint
-                />
-                
-                <View style={styles.characterCountContainer}>
-                  <ThemedText style={styles.characterCount}>
-                    {newPostContent.length}/1024 characters
-                  </ThemedText>
+              <ScrollView 
+                style={styles.newPostScrollView}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.newPostContainer}>
+                  <TextInput
+                    style={styles.titleInput}
+                    placeholder="Title"
+                    placeholderTextColor="#9e9e9e"
+                    value={newPostTitle}
+                    onChangeText={setNewPostTitle}
+                    maxLength={128} // Match backend constraint
+                  />
+                  
+                  <TextInput
+                    style={styles.newPostInput}
+                    placeholder="What has helped with your tinnitus?"
+                    placeholderTextColor="#9e9e9e"
+                    multiline
+                    textAlignVertical="top"
+                    value={newPostContent}
+                    onChangeText={setNewPostContent}
+                    maxLength={1024} // Match backend constraint
+                  />
+                  
+                  <View style={styles.characterCountContainer}>
+                    <ThemedText style={styles.characterCount}>
+                      {newPostContent.length}/1024 characters
+                    </ThemedText>
+                  </View>
+                  
+                  <Button
+                    label={creatingPost ? "Posting..." : "Post"}
+                    onPress={handleSubmitNewPost}
+                    disabled={!newPostContent.trim() || !newPostTitle.trim() || creatingPost}
+                    variant="primary"
+                    style={styles.postButton}
+                  />
                 </View>
-                
-                <Button
-                  label={creatingPost ? "Posting..." : "Post"}
-                  onPress={handleSubmitNewPost}
-                  disabled={!newPostContent.trim() || !newPostTitle.trim() || creatingPost}
-                  variant="primary"
-                  style={styles.postButton}
-                />
-              </View>
+              </ScrollView>
             </ThemedView>
           </KeyboardAvoidingView>
         </View>
@@ -800,13 +807,16 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     padding: 20,
     minHeight: 350,
+    maxHeight: '90%',
   },
   keyboardAvoidingView: {
     width: '100%',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   newPostContainer: {
-    flex: 1,
     marginBottom: Platform.OS === 'ios' ? 30 : 0,
+    paddingBottom: 20,
   },
   newPostInput: {
     borderWidth: 1,
@@ -827,6 +837,9 @@ const styles = StyleSheet.create({
   },
   postButton: {
     marginTop: 8,
+    height: 50,
+    marginBottom: 16,
+    borderRadius: 12,
   },
   loadingContainer: {
     flex: 1,
@@ -888,5 +901,8 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     color: '#4a4a4a',
+  },
+  newPostScrollView: {
+    flex: 1,
   },
 }); 

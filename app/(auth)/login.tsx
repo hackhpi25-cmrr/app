@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -12,22 +12,37 @@ import {
   ScrollView
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { AuthService, LoginData } from '@/services/AuthService';
 import { Colors } from '@/constants/Colors';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { username: usernameParam, message } = useLocalSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Get theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const tintColor = useThemeColor({}, 'tint');
+
+  useEffect(() => {
+    // Set username from params if available
+    if (usernameParam) {
+      setUsername(typeof usernameParam === 'string' ? usernameParam : '');
+    }
+    
+    // Set success message if available
+    if (message) {
+      setSuccessMessage(typeof message === 'string' ? message : '');
+    }
+  }, [usernameParam, message]);
 
   const handleLogin = async () => {
     // Reset error state
@@ -47,10 +62,43 @@ export default function LoginScreen() {
         password
       };
       
-      await AuthService.login(loginData);
+      const tokens = await AuthService.login(loginData);
       
-      // Redirect to main app
-      router.replace('/(tabs)');
+      // Explicitly store a user ID for testing purposes
+      // In a production app, this should be retrieved from the backend
+      await AsyncStorage.setItem('user_id', '1');
+      console.log('Set default user ID: 1 for testing during login');
+      
+      // Get user information from the API
+      const isNewUser = !!successMessage;
+      
+      if (isNewUser) {
+        // User just registered, go to baseline questionnaire
+        try {
+          // For new users, we need to get their user ID
+          const response = await fetch(`${AuthService.API_URL}/amiauth`, {
+            headers: {
+              'Authorization': `Bearer ${tokens.access}`,
+            },
+          });
+          
+          if (response.ok) {
+            // The user is authenticated, but we need their user ID
+            // For now, we'll redirect to the baseline screen without the user ID
+            // and handle fetching it there
+            router.replace('/(auth)/baseline');
+          } else {
+            // If we can't verify authentication, just go to the main app
+            router.replace('/(tabs)');
+          }
+        } catch (error) {
+          console.error('Error checking auth status:', error);
+          router.replace('/(tabs)');
+        }
+      } else {
+        // Existing user, go to main app
+        router.replace('/(tabs)');
+      }
     } catch (error: any) {
       setError(error.message || 'Login failed. Please try again.');
     } finally {
@@ -76,6 +124,12 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.formContainer}>
+          {successMessage ? (
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>{successMessage}</Text>
+            </View>
+          ) : null}
+
           {error ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
@@ -166,6 +220,18 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#D00000',
+    fontSize: 14,
+  },
+  successContainer: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#81C784',
+  },
+  successText: {
+    color: '#2E7D32',
     fontSize: 14,
   },
   inputContainer: {

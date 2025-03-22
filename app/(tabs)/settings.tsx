@@ -1,11 +1,33 @@
-import { StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, Alert, View } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
 import { AuthService } from '@/services/AuthService';
+import { useState, useEffect } from 'react';
+import { CustomParameterScreen } from '@/components/CustomParameterScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const [showParameters, setShowParameters] = useState(false);
+
+  // Check if user ID is available, set a default if needed
+  useEffect(() => {
+    const checkUserId = async () => {
+      try {
+        const userId = await AsyncStorage.getItem('user_id');
+        if (!userId) {
+          // Set a default user ID for testing
+          await AsyncStorage.setItem('user_id', '1');
+          console.log('Set default user ID: 1 in settings screen');
+        }
+      } catch (error) {
+        console.error('Error checking user ID:', error);
+      }
+    };
+    
+    checkUserId();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -32,12 +54,33 @@ export default function SettingsScreen() {
     }
   };
 
+  if (showParameters) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setShowParameters(false)}>
+            <ThemedText style={styles.backButton}>← Back</ThemedText>
+          </TouchableOpacity>
+        </View>
+        <CustomParameterScreen />
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
       <ThemedText style={styles.text} type="title">Settings</ThemedText>
       
       <ThemedView style={styles.optionsContainer}>
-        {/* Settings options can be added here */}
+        {/* Custom Parameters option */}
+        <TouchableOpacity 
+          style={styles.optionButton}
+          onPress={() => setShowParameters(true)}
+        >
+          <ThemedText style={styles.optionText}>Manage Custom Parameters</ThemedText>
+        </TouchableOpacity>
+
+        {/* Additional settings options can be added here */}
         
         {/* Logout button */}
         <TouchableOpacity 
@@ -65,6 +108,16 @@ const styles = StyleSheet.create({
   optionsContainer: {
     marginTop: 20,
   },
+  optionButton: {
+    backgroundColor: '#F2F2F7',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  optionText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
   logoutButton: {
     backgroundColor: '#FF3B30',
     padding: 15,
@@ -76,5 +129,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 40,
+    marginBottom: 10,
+  },
+  backButton: {
+    fontSize: 18,
+    fontWeight: '500',
   }
 }); 

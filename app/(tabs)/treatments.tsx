@@ -52,7 +52,7 @@ export default function TreatmentsScreen() {
     { title: 'Distractions', icon: 'arrows-to-dot', onPress: () => router.push("/(treatments)/distractions") },
     { title: 'Relaxation', icon: 'spa', onPress: () => router.push("/(treatments)/relaxation") },
     { title: 'Movement', icon: 'person-walking', onPress: () => router.push("/(treatments)/movement") },
-    { title: 'Ear & Jaw Care', icon: 'ear-listen', onPress: () => console.log('Ear & Jaw Care pressed') },
+    { title: 'Ear & Jaw Care', icon: 'ear-listen', onPress: () => router.push("/(treatments)/earjaw") },
     { title: 'Cognitive Techniques', icon: 'brain', onPress: () => console.log('Cognitive Techniques pressed') },
   ];
 

@@ -14,7 +14,7 @@ try {
 }
 
 // Interval in milliseconds (2 minutes instead of 30 seconds to reduce server load)
-const DATA_COLLECTION_INTERVAL = 120000; // 2 minutes
+const DATA_COLLECTION_INTERVAL = 12000; // 2 minutes
 
 class EnvironmentalDataService {
   private timer: NodeJS.Timeout | null = null;

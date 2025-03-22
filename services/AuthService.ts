@@ -11,7 +11,7 @@ type NetworkConfig = {
 
 
 // Make API_URL a static property of AuthService
-export const API_URL = 'http://20.3.255.186:80';
+export const API_URL = 'https://hackhpi25.chuangsheep.com';
 
 export interface User {
   username: string;

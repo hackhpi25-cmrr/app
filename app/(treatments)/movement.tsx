@@ -126,6 +126,106 @@ const ExerciseCard: React.FC<{
   );
 };
 
+// Feedback component
+const TreatmentFeedback: React.FC<{
+  visible: boolean;
+  onClose: () => void;
+  exercise: Exercise;
+}> = ({ visible, onClose, exercise }) => {
+  const colorScheme = useColorScheme();
+  const [rating, setRating] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!visible) {
+      setRating(null);
+      setFeedback(null);
+    }
+  }, [visible]);
+  
+  const handleRating = (value: number) => {
+    setRating(value);
+    
+    // Set automatic feedback message based on rating
+    if (value <= 1) {
+      setFeedback("Sorry it didn't help. Next time try a different technique or longer duration.");
+    } else if (value <= 3) {
+      setFeedback("Great start! Try this exercise again or explore other treatments.");
+    } else {
+      setFeedback("Excellent! We're glad this technique helped with your tinnitus symptoms.");
+    }
+  };
+  
+  if (!exercise) return null;
+  
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <ThemedView style={styles.feedbackModal} lightColor="#ffffff">
+          <View style={styles.feedbackHeader}>
+            <ThemedText style={styles.feedbackTitle}>How was your experience?</ThemedText>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <FontAwesome6 name="xmark" size={20} color="#777" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.feedbackContent}>
+            <ThemedText style={styles.exerciseCompleteText}>
+              You've completed:
+            </ThemedText>
+            <ThemedText style={styles.exerciseNameText}>
+              {exercise.title}
+            </ThemedText>
+            
+            <View style={styles.ratingContainer}>
+              <ThemedText style={styles.ratingLabel}>
+                Did this help with your tinnitus symptoms?
+              </ThemedText>
+              
+              <View style={styles.starsContainer}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity 
+                    key={star} 
+                    onPress={() => handleRating(star)}
+                    style={styles.starButton}
+                  >
+                    <FontAwesome6 
+                      name={star <= (rating || 0) ? "star" : "star"} 
+                      solid={star <= (rating || 0)}
+                      size={36} 
+                      color={star <= (rating || 0) ? Colors[colorScheme].tint : '#e0e0e0'} 
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {feedback && (
+                <View style={styles.feedbackMessageContainer}>
+                  <ThemedText style={styles.feedbackMessage}>
+                    {feedback}
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+            
+            <Button
+              label="Done"
+              onPress={onClose}
+              size="medium"
+              style={{marginTop: 20}}
+            />
+          </View>
+        </ThemedView>
+      </View>
+    </Modal>
+  );
+};
+
 // ExerciseDetail component
 const ExerciseDetail: React.FC<{
   visible: boolean;
@@ -134,11 +234,13 @@ const ExerciseDetail: React.FC<{
 }> = ({ visible, onClose, exercise }) => {
   const colorScheme = useColorScheme();
   const [currentStep, setCurrentStep] = useState(0);
+  const [showFeedback, setShowFeedback] = useState(false);
   
   // Reset step when modal is closed
   useEffect(() => {
     if (!visible) {
       setCurrentStep(0);
+      setShowFeedback(false);
     }
   }, [visible]);
   
@@ -147,78 +249,97 @@ const ExerciseDetail: React.FC<{
   const hasMoreSteps = currentStep < exercise.steps.length - 1;
   const hasPreviousSteps = currentStep > 0;
   
+  const handleFinish = () => {
+    setShowFeedback(true);
+  };
+  
+  const handleFeedbackClose = () => {
+    setShowFeedback(false);
+    onClose();
+  };
+  
   return (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <ThemedView style={styles.exerciseModal} lightColor="#ffffff">
-          <View style={styles.exerciseDetailHeader}>
-            <ThemedText style={styles.exerciseDetailTitle}>{exercise.title}</ThemedText>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <FontAwesome6 name="xmark" size={20} color="#777" />
-            </TouchableOpacity>
-          </View>
+    <>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={visible && !showFeedback}
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          <ThemedView style={styles.exerciseModal} lightColor="#ffffff">
+            <View style={styles.exerciseDetailHeader}>
+              <ThemedText style={styles.exerciseDetailTitle}>{exercise.title}</ThemedText>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <FontAwesome6 name="xmark" size={20} color="#777" />
+              </TouchableOpacity>
+            </View>
 
-          <ScrollView 
-            contentContainerStyle={styles.scrollableContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.exerciseContent}>
-              <View style={styles.stepProgress}>
-                <ThemedText style={styles.stepProgressText}>
-                  Step {currentStep + 1} of {exercise.steps.length}
+            <ScrollView 
+              contentContainerStyle={styles.scrollableContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.exerciseContent}>
+                <View style={styles.stepProgress}>
+                  <ThemedText style={styles.stepProgressText}>
+                    Step {currentStep + 1} of {exercise.steps.length}
+                  </ThemedText>
+                  <View style={styles.progressBar}>
+                    <View 
+                      style={[
+                        styles.progressFill,
+                        { 
+                          width: `${((currentStep + 1) / exercise.steps.length) * 100}%`,
+                          backgroundColor: Colors[colorScheme].tint
+                        }
+                      ]} 
+                    />
+                  </View>
+                </View>
+                
+                <ThemedText style={styles.stepInstruction}>
+                  {exercise.steps[currentStep]}
                 </ThemedText>
-                <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progressFill,
-                      { 
-                        width: `${((currentStep + 1) / exercise.steps.length) * 100}%`,
-                        backgroundColor: Colors[colorScheme].tint
-                      }
-                    ]} 
+                
+                <View style={styles.navigationControls}>
+                  <Button
+                    label="Previous"
+                    onPress={() => setCurrentStep(prev => prev - 1)}
+                    size="medium"
+                    variant="outline"
+                    style={{flex: 1, marginRight: 10}}
+                    disabled={!hasPreviousSteps}
                   />
+                  {hasMoreSteps ? (
+                    <Button
+                      label="Next"
+                      onPress={() => setCurrentStep(prev => prev + 1)}
+                      size="medium"
+                      style={{flex: 1}}
+                    />
+                  ) : (
+                    <Button
+                      label="Finish"
+                      onPress={handleFinish}
+                      size="medium"
+                      style={{flex: 1}}
+                    />
+                  )}
                 </View>
               </View>
-              
-              <ThemedText style={styles.stepInstruction}>
-                {exercise.steps[currentStep]}
-              </ThemedText>
-              
-              <View style={styles.navigationControls}>
-                <Button
-                  label="Previous"
-                  onPress={() => setCurrentStep(prev => prev - 1)}
-                  size="medium"
-                  variant="outline"
-                  style={{flex: 1, marginRight: 10}}
-                  disabled={!hasPreviousSteps}
-                />
-                {hasMoreSteps ? (
-                  <Button
-                    label="Next"
-                    onPress={() => setCurrentStep(prev => prev + 1)}
-                    size="medium"
-                    style={{flex: 1}}
-                  />
-                ) : (
-                  <Button
-                    label="Finish"
-                    onPress={onClose}
-                    size="medium"
-                    style={{flex: 1}}
-                  />
-                )}
-              </View>
-            </View>
-          </ScrollView>
-        </ThemedView>
-      </View>
-    </Modal>
+            </ScrollView>
+          </ThemedView>
+        </View>
+      </Modal>
+      
+      {exercise && (
+        <TreatmentFeedback
+          visible={showFeedback}
+          onClose={handleFeedbackClose}
+          exercise={exercise}
+        />
+      )}
+    </>
   );
 };
 
@@ -774,5 +895,77 @@ const styles = StyleSheet.create({
   navigationControls: {
     flexDirection: 'row',
     width: '100%',
+  },
+  feedbackModal: {
+    width: '100%',
+    borderRadius: 20,
+    padding: 0,
+    maxHeight: '80%',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
+  feedbackHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  feedbackTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  feedbackContent: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  exerciseCompleteText: {
+    fontSize: 16,
+    opacity: 0.7,
+    marginBottom: 5,
+  },
+  exerciseNameText: {
+    fontSize: 22,
+    fontWeight: '600',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  ratingContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  ratingLabel: {
+    fontSize: 16,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    marginBottom: 25,
+  },
+  starButton: {
+    padding: 5,
+  },
+  feedbackMessageContainer: {
+    backgroundColor: `${Colors.light.tint}10`,
+    borderRadius: 12,
+    padding: 15,
+    width: '100%',
+  },
+  feedbackMessage: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 }); 
